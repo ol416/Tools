@@ -48,14 +48,19 @@ def split_and_rename_pdfs(input_folder, output_folder):
                     # 获取当前页
                     page = reader.pages[page_number]
 
-                    regex_str = r'限公司(59JF(.?)*)'
                     page_content = page.extract_text()
-                    match = re.search(regex_str, page_content)
-                    match_str = match.group(1).strip()
+                    regex_str = r'(59JF[A-Za-z0-9]+)'
+                    # regex_str = r'LIU·JO\n([69GL|69GB|69GX|69GT|69GW|69GD|69GZ|69GK|69GY|69GA|69GC](.?)*)'
+                    match = re.findall(regex_str, page_content)
+                    if not match is None:
+                        match_str = [_ for _ in match if _ == min(match,key=len)][0].strip()
+                    else:
+                        print(f'f:{file.name}-page:{page_number}>出现异常')
+                        break
 
                     # 构造输出文件名
                     # output_filename = f"{os.path.splitext(filename)[0]}_page{page_number + 1}.pdf"
-                    output_filename = f'{match.group(1).strip()}.pdf'
+                    output_filename = f'{match[1].strip()}.pdf'
                     output_path = os.path.join(output_folder, output_filename)
                     if not os.path.exists(output_path):
                         
