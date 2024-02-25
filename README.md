@@ -3,3 +3,5 @@
     计算当前目录下所有子目录jpg格式图片的数量
 ## values_generate.py
     读取ZD888-task.xlsx内的数据，使其转为Zerbra ZD888 相关打印软件支持的values格式文件
+## rembg-gui.py
+    rembg的gui实现
