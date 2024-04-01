@@ -1,3 +1,4 @@
+import shutil
 from PyPDF2 import PdfReader
 from wand.image import Image
 from wand.color import Color
@@ -50,23 +51,35 @@ def merge_images_vertically(image_paths, output_path):
 
 def process_pdf_files(input_dir="./pdf_files", output_dir="./output_images"):
     os.makedirs(output_dir, exist_ok=True)
-    
+    temp_image_paths = []
+
     # Process each PDF file in the input directory
-    for filename in os.listdir(input_dir):
-        if filename.endswith(".pdf"):
-            pdf_path = os.path.join(input_dir, filename)
-            print(f"Processing PDF: {pdf_path}")
+    for root, _, files in os.walk(input_dir):
+        for filename in files:
+            if filename.endswith(".pdf"):
+                pdf_path = os.path.join(root, filename)
+                print(f"Processing PDF: {pdf_path}")
 
-            # Convert PDF to images
-            image_paths = convert_pdf_to_image(pdf_path)
+                # Convert PDF to images
+                image_paths = convert_pdf_to_image(pdf_path)
+                temp_image_paths.extend(image_paths)
 
-            # Merge images vertically if the PDF has multiple pages
-            if len(image_paths) > 1:
-                output_image_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}.jpg")
-                merge_images_vertically(image_paths, output_image_path)
-                print(f"Merged images saved to: {output_image_path}")
-            else:
-                print("Single page PDF, no merging required.")
+                # Merge images vertically if the PDF has multiple pages
+                if len(image_paths) > 1:
+                    output_image_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}.jpg")
+                    merge_images_vertically(image_paths, output_image_path)
+                    print(f"Merged images saved to: {output_image_path}")
+                else:
+                    print("Single page PDF, no merging required.")
+
+    # Delete temporary image files
+    for img_path in temp_image_paths:
+        os.remove(img_path)
+        print(f"Deleted temporary image file: {img_path}")
+
+    # Delete temporary directory
+    shutil.rmtree("./temp_images")
 
 # 执行处理
-process_pdf_files()
+process_pdf_files(output_dir = './img')
+
