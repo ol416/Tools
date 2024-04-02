@@ -60,13 +60,19 @@ def process_pdf_files(input_dir="./pdf_files", output_dir="./output_images"):
                 pdf_path = os.path.join(root, filename)
                 print(f"Processing PDF: {pdf_path}")
 
+                # Check if a file with the same name exists in the output directory
+                output_image_name = os.path.splitext(filename)[0]
+                output_image_path = os.path.join(output_dir, f"{output_image_name}.jpg")
+                if os.path.exists(output_image_path):
+                    print(f"A file with the name '{output_image_name}' already exists in the output directory. Skipping this file.")
+                    continue
+
                 # Convert PDF to images
                 image_paths = convert_pdf_to_image(pdf_path)
                 temp_image_paths.extend(image_paths)
 
                 # Merge images vertically if the PDF has multiple pages
                 if len(image_paths) > 1:
-                    output_image_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}.jpg")
                     merge_images_vertically(image_paths, output_image_path)
                     print(f"Merged images saved to: {output_image_path}")
                 else:
@@ -74,12 +80,13 @@ def process_pdf_files(input_dir="./pdf_files", output_dir="./output_images"):
 
     # Delete temporary image files
     for img_path in temp_image_paths:
-        os.remove(img_path)
-        print(f"Deleted temporary image file: {img_path}")
+        if os.path.exists(img_path):
+            os.remove(img_path)
+            print(f"Deleted temporary image file: {img_path}")
 
     # Delete temporary directory
     shutil.rmtree("./temp_images")
 
-# 执行处理
-process_pdf_files(output_dir = './img')
 
+# 执行处理
+process_pdf_files(output_dir='./img')
