@@ -1,3 +1,6 @@
+# 文件名：split_and_rename_pdfs.py
+# 语言：Python
+
 import os
 import re
 from PyPDF2 import PdfReader, PdfWriter
@@ -5,7 +8,8 @@ from wand.image import Image
 from wand.color import Color
 from PIL import Image as PImage
 
-def radio_size(w,h,x,model):
+def radio_size(w, h, x, model):
+    '''根据指定模型计算比例尺寸'''
     if model == "w":
         return round(w / h * x)
     elif model == "h":
@@ -14,10 +18,8 @@ def radio_size(w,h,x,model):
         return round(w / h * x)
 
 def get_img_size(fn, types=True):
-    '''
-        types = True cm
-        types = False pixel
-    '''
+    '''获取图像尺寸'''
+    '''types = True cm, types = False pixel'''
     img = PImage.open(fn)
     dpi = img.info['dpi'][0]
     if types:
@@ -41,83 +43,52 @@ def split_and_rename_pdfs(input_folder, output_folder):
             with open(input_path, 'rb') as file:
                 reader = PdfReader(file)
                 # 遍历每一页
-                for page_number in range(len(reader.pages)):
+                for page_number, page in enumerate(reader.pages):
                     # 创建一个新的PDF写入器
                     writer = PdfWriter()
 
-                    # 获取当前页
-                    page = reader.pages[page_number]
-
+                    # 获取当前页内容
                     page_content = page.extract_text()
                     regex_str = r'(59JF[A-Za-z0-9]+)'
-                    # regex_str = r'LIU·JO\n([69GL|69GB|69GX|69GT|69GW|69GD|69GZ|69GK|69GY|69GA|69GC](.?)*)'
+                    if "LIU·JO" in page_content:
+                        regex_str = r'(69G[A-Z0-9]+)'
                     match = re.findall(regex_str, page_content)
-                    if not match is None:
-                        match_str = [_ for _ in match if _ == min(match,key=len)][0].strip()
+
+                    if match:
+                        match_str = match[0].strip()
                     else:
-                        print(f'f:{file.name}-page:{page_number}>出现异常')
-                        break
+                        print(f'{file.name}-page:{page_number}>未找到匹配项')
+                        continue
 
                     # 构造输出文件名
-                    # output_filename = f"{os.path.splitext(filename)[0]}_page{page_number + 1}.pdf"
-                    output_filename = f'{match[1].strip()}.pdf'
+                    output_filename = f'{match_str}.pdf'
                     output_path = os.path.join(output_folder, output_filename)
                     if not os.path.exists(output_path):
-                        
                         # 将当前页添加到新的PDF文件中
                         writer.add_page(page)
-
                         # 保存新的PDF文件
-                        # if not os.path.exists(output_path):
                         with open(output_path, 'wb') as output_file:
-                                writer.write(output_file)  
-                                            
-                    
-                    if match:
-                        extracted_content = match_str
+                            writer.write(output_file)
+                            print(f'{output_filename} 已保存')
 
-                        # 构造新的文件路径
-                        new_filename = f"{extracted_content}.pdf"
-                        new_path = os.path.join(output_folder, new_filename)
+                    # 构造图像文件路径
+                    output_jpeg_filename = f"{os.path.splitext(output_filename)[0]}.jpg"
+                    output_jpeg_path = os.path.join('img', output_jpeg_filename)
 
-                        # 重命名文件
-                        # Construct the output JPEG filename
-                        output_jpeg_filename = f"{os.path.splitext(new_filename)[0]}.jpg"
-                        output_jpeg_path = os.path.join('img', output_jpeg_filename)  
-
-                        if not os.path.exists(new_path):
-                            os.rename(output_path, new_path)
-                        
-
-                        if not os.path.exists(output_jpeg_path):
-                            # Convert PDF file to JPEG
-                            if not os.path.exists('img'):
-                                os.makedirs('img')         
-
-                            with Image(filename=new_path,resolution = 300) as img:
-                                # img.background_color = Color("white")
-                                img.alpha_channel = 'remove'
-                                img.compression_quality = 100
-                                img.resolution = 300
-                                img.units = 'pixelsperinch'
-                                img.format = 'jpg'
-
-                                img.resize(radio_size(img.width,img.height,1600,"w"),1600)
-                                img.crop(height=1500)
-                                img.resize(radio_size(img.width,img.height,1600,"w"),1600)
-
-                                # 扩展画布
-                                img.extent(width=750,height=1600,gravity="center")
-                                
-                                # 图片裁切
-                                # img.crop(height=1600,top=60)
-
-                                # Save the JPEG image
-                                img.save(filename=output_jpeg_path)
-
-                            print(match_str)
-                            
-
+                    # 转换PDF为JPEG
+                    if not os.path.exists(output_jpeg_path):
+                        if not os.path.exists('img'):
+                            os.makedirs('img')
+                        with Image(filename=output_path, resolution=300) as img:
+                            img.alpha_channel = 'remove'
+                            img.compression_quality = 100
+                            img.units = 'pixelsperinch'
+                            img.format = 'jpg'
+                            img.resize(radio_size(img.width, img.height, 1600, "w"), 1600)
+                            img.crop(height=1550)
+                            img.extent(width=750, height=1600, gravity="center")
+                            img.save(filename=output_jpeg_path)
+                            print(f'{output_jpeg_filename} 已保存')
 
 # 输入文件夹路径和输出文件夹路径
 input_folder = 'data'
