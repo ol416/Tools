@@ -1,4 +1,4 @@
-const xpath = "//*[@id='tab0']/div/span";
+const xpath = '//*[@id="tab0"]/div/span';
 const iconAttribute = "icon";
 
 function findElementsByXPath(xpath) {
@@ -6,7 +6,7 @@ function findElementsByXPath(xpath) {
 }
 
 function clickElementsWithAttribute(elements, attribute, values) {
-  values.forEach(value => {
+  values.forEach((value) => {
     for (let i = 0; i < elements.snapshotLength; i++) {
       const element = elements.snapshotItem(i);
       if (element.getAttribute(attribute).includes(value)) {
@@ -22,7 +22,7 @@ function main() {
   const input = prompt("请输入逗号分割的字符串：");
   if (input) {
     const values = input.replace(/@&#xe/g, "#xe").replace(/&#xe/g, "#xe").split(",").map(value => value.trim());
-    console.log(`values: ${values}, typeof:${typeof values}`);
+    console.log(`values: ${values}|typeof:${typeof values}`);
     clickElementsWithAttribute(elements, iconAttribute, values);
   } else {
     console.log("用户取消了输入或没有输入任何内容。");
