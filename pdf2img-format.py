@@ -114,26 +114,29 @@ def split_and_rename_pdfs(input_folder, output_folder):
                         # 提取唯一的标识符
                         unique_identifier = extract_unique_identifier(page_content, patterns)
                         if unique_identifier:
+                            # 构造输出文件名
+                            output_filename = f'{unique_identifier}.pdf'
+                            output_path = os.path.join(output_folder, output_filename)
+
                             # 检查是否已有相同哈希值的文件
                             if unique_identifier in existing_hashes and existing_hashes[unique_identifier] == page_content_hash:
-                                print(f'{unique_identifier} 已存在并匹配，跳过保存')
-                                
-                                # 构造输出文件名
-                                output_filename = f'{unique_identifier}.pdf'
-                                output_path = os.path.join(output_folder, output_filename)
-                                
-                                # 构造图像文件路径
-                                output_jpeg_filename = f"{unique_identifier}.jpg"
-                                output_jpeg_path = os.path.join('img', output_jpeg_filename)                                
-                                
-                                # 生成JPEG文件
-                                if not os.path.exists(output_jpeg_path):
-                                    convert_pdf_to_jpeg(output_path, output_jpeg_path)
-                                    print(f'{output_jpeg_filename} 已保存')
+                                if os.path.exists(output_path):
+                                    print(f'{unique_identifier} 已存在并匹配，跳过保存')
+
+                                    # 构造图像文件路径
+                                    output_jpeg_filename = f"{unique_identifier}.jpg"
+                                    output_jpeg_path = os.path.join('img', output_jpeg_filename)
+
+                                    # 生成JPEG文件
+                                    if not os.path.exists(output_jpeg_path):
+                                        convert_pdf_to_jpeg(output_path, output_jpeg_path)
+                                        print(f'{output_jpeg_filename} 已保存')
+                                else:
+                                    # 如果输出文件不存在，移除哈希表中的记录
+                                    del page_hashes[unique_identifier]
+                                    print(f'{output_filename} 不存在，已从哈希表中移除')
+
                             else:
-                                # 构造输出文件名
-                                output_filename = f'{unique_identifier}.pdf'
-                                output_path = os.path.join(output_folder, output_filename)
                                 # 保存页面
                                 save_page_as_pdf(page, output_path)
                                 print(f'{output_filename} 已保存')
@@ -146,7 +149,7 @@ def split_and_rename_pdfs(input_folder, output_folder):
                                 if not os.path.exists(output_jpeg_path):
                                     convert_pdf_to_jpeg(output_path, output_jpeg_path)
                                     print(f'{output_jpeg_filename} 已保存')
-                                
+
                                 # 保存当前页的哈希值
                                 page_hashes[unique_identifier] = page_content_hash
                         else:
