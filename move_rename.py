@@ -1,6 +1,7 @@
 import os
 import shutil
 import zipfile
+from datetime import date
 
 def getallfiles(path) -> list:
     if not os.path.exists(path):
@@ -50,7 +51,7 @@ def main(path):
     create_filename_folder(path_list)
     
     # 第一次压缩
-    compress_to_zip(path, 'all_folders.zip')
+    compress_to_zip(path, f'{date.today()}.zip')
     
     # # 重命名 826.jpg 为 826-共用款图.jpg
     # rename_files_in_folders(path, '826.jpg', '826-共用款图.jpg')
