@@ -139,7 +139,18 @@ const exportToExcelInChunks = (data, filename, chunkSize = 10000) => {
 
     for (let i = 0; i < data.length; i += chunkSize) {
         const chunk = data.slice(i, i + chunkSize);
-        const sheet = XLSX.utils.json_to_sheet(chunk);
+        const formattedChunk = chunk.map(row => ({
+            server_filename: row.server_filename,
+            real_category: row.real_category,
+            thumbs_icon: row.thumbs?.icon || '',
+            thumbs_url1: row.thumbs?.url1 || '',
+            thumbs_url2: row.thumbs?.url2 || '',
+            thumbs_url3: row.thumbs?.url3 || '',
+            md5: row.md5 || '',
+            path: row.path || '',
+            size: row.size || ''
+        }));
+        const sheet = XLSX.utils.json_to_sheet(formattedChunk);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, sheet, 'Sheet1');
 
@@ -153,7 +164,7 @@ const exportToExcelInChunks = (data, filename, chunkSize = 10000) => {
 // 主程序逻辑
 try {
     // 动态获取 chunkSize
-    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 100000）:', '100000')) || 10000;
+    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 10000）:', '10000')) || 10000;
 
     // 要遍历的路径数组
     const paths = ['/path1']; // 可以添加更多路径 ['/path1', '/path2']
