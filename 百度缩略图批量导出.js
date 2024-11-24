@@ -164,7 +164,7 @@ const exportToExcelInChunks = (data, filename, chunkSize = 10000) => {
 // 主程序逻辑
 try {
     // 动态获取 chunkSize
-    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 10000）:', '10000')) || 10000;
+    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 100000）:', '100000')) || 10000;
 
     // 要遍历的路径数组
     const paths = ['/path1']; // 可以添加更多路径 ['/path1', '/path2']
