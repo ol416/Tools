@@ -14,36 +14,46 @@ const ls = async (path, page = 1) => {
     try {
         const response = await fetch(`https://pan.baidu.com/api/list?clienttype=0&app_id=250528&web=1&dp-logid=${getLogId()}&order=time&desc=1&dir=${path}&num=100&page=${page}`);
         const data = await response.json();
-        return (data.list || []).map(item => ({
-            path: item.path,
-            isdir: item.isdir,
-            server_filename: item.server_filename,
-            real_category: item.real_category,
-            thumbs: item.thumbs || null,
-            md5: item.md5,
-            size: item.size,
-        }));
+        return {
+            files: (data.list || []).map(item => ({
+                path: item.path,
+                isdir: item.isdir,
+                server_filename: item.server_filename,
+                real_category: item.real_category,
+                thumbs: item.thumbs || null,
+                md5: item.md5,
+                size: item.size,
+            })),
+            hasMore: data.list && data.list.length === 100 // 判断是否还有更多文件
+        };
     } catch (error) {
         console.error(`Error fetching path: ${path}, page: ${page}`, error);
-        return [];
+        return { files: [], hasMore: false };
     }
 };
 
-// 非递归获取目录下所有文件
+// 非递归获取目录下所有文件，支持分页
 const ls_r_iterative = async (path) => {
     let stack = [path];
     let allFiles = [];
 
     while (stack.length > 0) {
         const currentPath = stack.pop();
-        const files = await ls(currentPath);
+        let page = 1;
+        let hasMore = true;
 
-        for (const file of files) {
-            if (file.isdir) {
-                stack.push(file.path);
-            } else {
-                allFiles.push(file);
+        while (hasMore) {
+            const { files, hasMore: more } = await ls(currentPath, page++);
+
+            for (const file of files) {
+                if (file.isdir) {
+                    stack.push(file.path);
+                } else {
+                    allFiles.push(file);
+                }
             }
+
+            hasMore = more;
         }
     }
 
@@ -164,7 +174,7 @@ const exportToExcelInChunks = (data, filename, chunkSize = 10000) => {
 // 主程序逻辑
 try {
     // 动态获取 chunkSize
-    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 100000）:', '100000')) || 10000;
+    const chunkSize = Number(prompt('请输入每块导出数据的行数（默认 100000）:', '100000')) || 100000;
 
     // 要遍历的路径数组
     const paths = ['/path1']; // 可以添加更多路径 ['/path1', '/path2']
