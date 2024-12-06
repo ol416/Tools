@@ -1,6 +1,7 @@
 import os
 import shutil
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
+from tqdm.contrib.concurrent import thread_map  # 使用tqdm提供的线程映射方法
 
 def move_files(args):
     """单个文件/文件夹移动的任务"""
@@ -39,10 +40,11 @@ def split_folder_parallel(input_folder, output_base, limit=50000):
         item_path = os.path.join(input_folder, item)
         tasks.append((item_path, target_folder))
 
-    # 使用多进程移动文件
+    # 使用tqdm的线程版本来避免multiprocessing的问题
     print(f"开始使用 {cpu_count()} 个核心处理...")
-    with Pool(processes=cpu_count()) as pool:
-        pool.map(move_files, tasks)
+
+    # 使用tqdm的线程映射方法，并传递任务
+    thread_map(move_files, tasks, max_workers=cpu_count(), chunksize=100)
 
     print("文件夹拆分完成！")
 
