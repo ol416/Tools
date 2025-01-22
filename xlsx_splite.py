@@ -10,8 +10,6 @@ if not  os.path.exists(output_folder):
 # 读取 Excel 文件
 df = pd.read_excel('test.xlsx', header=None)
 
-
-
 # 找到每个款号的索引
 item_indices = df[df[0] == '款号'].index
 
