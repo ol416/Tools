@@ -89,7 +89,7 @@ def compress_target(target: Path, password: str, result_dir: str = '7z_result') 
     # -ms=64M      固实模式块大小
     # -slp         启用大页模式
     _7z_cmd = (
-        '7za a{rec} -p{pwd} -mhe=on -m0=bcj -m1=zstd -mx=9 -t7z -ms=64M -slp "{result}" "{target}"'
+        '7za a{rec} -p{pwd} -mhe=on -m0=bcj -m1=zstd -mx=11 -t7z -ms=64M -slp "{result}" "{target}"'
     ).format(
         rec=rec_switch,
         pwd=password,
