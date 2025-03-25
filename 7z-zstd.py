@@ -7,9 +7,11 @@ from pathlib import Path
 import concurrent.futures
 import time
 from openpyxl import Workbook
-
-# 新增openpyxl样式导入
+import re
 from openpyxl.styles import Font
+import random
+import string
+
 
 def get_targets(root: str = './') -> list:
     """
@@ -171,7 +173,9 @@ def write_log_xlsx(records: list, filename: str = "log.xlsx"):
             # 设置文件名列的超链接
             row_num = ws_main.max_row
             cell = ws_main.cell(row=row_num, column=1)
-            sheet_name = rec["文件名"][:60]  # 截断到60字符
+            # 替换非法字符生成安全的工作表名称
+            raw_name = rec["文件名"][:60]
+            sheet_name = re.sub(r'[\[\]\\\*\:\?\/\|\"]', '_', raw_name)
             cell.hyperlink = f"#{sheet_name}!A1"
             cell.font = Font(underline='single', color="0563C1")  # 蓝色下划线
             
@@ -191,7 +195,14 @@ def write_log_xlsx(records: list, filename: str = "log.xlsx"):
     wb.save(filename)
 
 def main():
-    password = input("请输入密码:").strip() or 'ol416'
+    # 修改：优化输入提示并增加随机密码逻辑
+    user_input = input("请输入密码或输入 'r' 生成随机密码，不输入则默认为 'ol416': ").strip()
+    if user_input.lower() == 'r':
+        # 生成18位随机密码（大小写字母+数字）
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=18))
+    else:
+        password = user_input or 'ol416'
+    
     targets = get_targets()
     records = []
     
