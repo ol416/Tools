@@ -8,6 +8,9 @@ import concurrent.futures
 import time
 from openpyxl import Workbook
 
+# 新增openpyxl样式导入
+from openpyxl.styles import Font
+
 def get_targets(root: str = './') -> list:
     """
     遍历当前目录，返回所有待压缩的目标（文件或文件夹），
@@ -117,6 +120,21 @@ def process_target(target: Path, password: str) -> dict:
         "大小": size_str,
         "备注": f"耗时 {elapsed:.2f} 秒"
     }
+    # 新增处理文件夹的子文件列表
+    if target.is_dir():
+        sub_files_info = []
+        for path in target.rglob('*'):
+            if path.is_file():
+                # 修改相对路径基准为父目录，包含目标文件夹名称
+                rel_path = path.relative_to(target.parent)
+                file_size = path.stat().st_size
+                sub_files_info.append({
+                    "文件路径": str(rel_path),
+                    "大小": format_size(file_size),
+                })
+        record["子文件列表"] = sub_files_info
+    else:
+        record["子文件列表"] = None  # 非文件夹默认设为None
     # 重命名压缩文件为哈希值
     new_path = compressed_file.with_name(f"{hash_val}.7z")
     compressed_file.rename(new_path)
@@ -124,15 +142,52 @@ def process_target(target: Path, password: str) -> dict:
     return record
 
 def write_log_xlsx(records: list, filename: str = "log.xlsx"):
-    """
-    将记录写入 XLSX 文件，表头为【文件名, blake3, pwd, 大小, 备注】
-    """
+    # 对记录按类型（文件夹优先）和文件名排序
+    records.sort(key=lambda x: (0 if x.get("子文件列表") else 1, x["文件名"]))
+    
     wb = Workbook()
-    ws = wb.active
-    ws.title = "压缩日志"
-    ws.append(["文件名", "blake3", "pwd", "大小", "备注"])
+    # 主工作表
+    ws_main = wb.active
+    ws_main.title = "主日志"
+    ws_main.append(["文件名", "blake3", "pwd", "大小", "备注"])
+    
+    # 存储其他工作表
+    sub_sheets = {}
+    
     for rec in records:
-        ws.append([rec["文件名"], rec["blake3"], rec["pwd"], rec["大小"], rec["备注"]])
+        # 写入主日志
+        row = [
+            rec["文件名"],
+            rec["blake3"],
+            rec["pwd"],
+            rec["大小"],
+            rec["备注"]
+        ]
+        ws_main.append(row)
+        
+        # 处理子文件列表
+        sub_files = rec.get("子文件列表", None)
+        if sub_files:
+            # 设置文件名列的超链接
+            row_num = ws_main.max_row
+            cell = ws_main.cell(row=row_num, column=1)
+            sheet_name = rec["文件名"][:60]  # 截断到60字符
+            cell.hyperlink = f"#{sheet_name}!A1"
+            cell.font = Font(underline='single', color="0563C1")  # 蓝色下划线
+            
+            # 创建或获取子工作表
+            if sheet_name in sub_sheets:
+                ws = sub_sheets[sheet_name]
+            else:
+                ws = wb.create_sheet(title=sheet_name)
+                ws.append(["文件路径", "大小"])  
+                sub_sheets[sheet_name] = ws
+            for sub_file in sub_files:
+                ws.append([sub_file["文件路径"], sub_file["大小"]])
+        else:
+            # 普通文件不处理
+            pass
+    
     wb.save(filename)
 
 def main():
