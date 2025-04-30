@@ -12,7 +12,6 @@ from openpyxl.styles import Font
 import random
 import string
 
-
 def get_targets(root: str = './') -> list:
     """
     遍历当前目录，返回所有待压缩的目标（文件或文件夹），
@@ -75,7 +74,9 @@ def compress_target(target: Path, password: str, result_dir: str = '7z_result') 
     如果目标为文件夹，则在命令中添加 -r- 禁用递归（只压缩文件夹本身）。
     """
     base = target.name
-    result_file = target.parent / result_dir / f"{base}.7z"
+    result_path = target.parent / result_dir
+    result_path.mkdir(exist_ok=True)
+    result_file = result_path / f"{base}.7z"
     
     # 如果目标是文件夹，则禁用递归（-r-），否则不添加该参数
     rec_switch = " -r- " if target.is_dir() else " "
@@ -85,9 +86,8 @@ def compress_target(target: Path, password: str, result_dir: str = '7z_result') 
     # -mhe=on       启用加密文件头
     # -m0=bcj       启用 BCJ 过滤器
     # -m1=zstd      启用 zstd 压缩算法（当前版本支持）
-    # -mx=9         最高压缩级别
+    # -mx=11        最高压缩级别
     # -t7z         指定格式为 7z
-    # -mmt         多线程压缩
     # -ms=64M      固实模式块大小
     # -slp         启用大页模式
     _7z_cmd = (
@@ -102,10 +102,38 @@ def compress_target(target: Path, password: str, result_dir: str = '7z_result') 
     subprocess.run(_7z_cmd, shell=True, check=True)
     return result_file
 
-def process_target(target: Path, password: str) -> dict:
+def split_file(file_path: Path, threshold_mb: int) -> list:
+    """
+    将大于阈值的文件分割为多个部分，每个部分大小为设定阈值（MB）。
+    返回分卷后生成的文件名列表，并删除原始文件。
+    """
+    file_size = file_path.stat().st_size
+    threshold_bytes = threshold_mb * 1024 * 1024
+    num_parts = math.ceil(file_size / threshold_bytes)
+    part_files = []
+    with open(file_path, 'rb') as f:
+        for i in range(num_parts):
+            part_file_name = file_path.with_name(f"{file_path.stem}{file_path.suffix}.{i+1:03d}")
+            with open(part_file_name, 'wb') as pf:
+                bytes_written = 0
+                # 每个分卷严格写入 threshold_bytes 大小，最后一卷可能不足
+                while bytes_written < threshold_bytes:
+                    read_size = min(1024*1024, threshold_bytes - bytes_written)
+                    data = f.read(read_size)
+                    if not data:
+                        break
+                    pf.write(data)
+                    bytes_written += len(data)
+            part_files.append(part_file_name.name)
+    # 删除原始完整文件
+    file_path.unlink()
+    return part_files
+
+def process_target(target: Path, password: str, threshold_mb: int) -> dict:
     """
     对单个目标进行压缩，然后计算压缩文件大小和 Blake3 哈希，
-    并将压缩文件重命名为哈希值，返回记录字典。
+    将压缩文件重命名为哈希值，若压缩文件体积超过阈值则自动执行分卷，
+    返回记录字典。
     """
     start_time = time.time()
     compressed_file = compress_target(target, password)
@@ -137,10 +165,19 @@ def process_target(target: Path, password: str) -> dict:
         record["子文件列表"] = sub_files_info
     else:
         record["子文件列表"] = None  # 非文件夹默认设为None
-    # 重命名压缩文件为哈希值
+
+    # 重命名压缩文件为 hash 值
     new_path = compressed_file.with_name(f"{hash_val}.7z")
     compressed_file.rename(new_path)
     record["压缩后文件"] = new_path.name
+
+    # 检查是否超过分卷阈值，若超过则执行分卷
+    if new_path.stat().st_size > threshold_mb * 1024 * 1024:
+        parts = split_file(new_path, threshold_mb)
+        record["分卷信息"] = parts
+    else:
+        record["分卷信息"] = None
+
     return record
 
 def write_log_xlsx(records: list, filename: str = "log.xlsx"):
@@ -188,26 +225,36 @@ def write_log_xlsx(records: list, filename: str = "log.xlsx"):
                 sub_sheets[sheet_name] = ws
             for sub_file in sub_files:
                 ws.append([sub_file["文件路径"], sub_file["大小"]])
-        else:
-            # 普通文件不处理
-            pass
     
     wb.save(filename)
 
 def main():
-    # 修改：优化输入提示并增加随机密码逻辑
-    user_input = input("请输入密码或输入 'r' 生成随机密码，不输入则默认为 'ol416': ").strip()
-    if user_input.lower() == 'r':
-        # 生成18位随机密码（大小写字母+数字）
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=18))
+    # 修改：解析输入，支持"密码 分卷阈值"格式，如果未提供阈值则默认为 1024MB
+    user_input = input("请输入密码或输入 'r' 生成随机密码及可选的分卷阈值(单位MB)，例如: r 500，或 mypassword 500，不输入则默认为 'ol416' 和 1024MB: ").strip()
+    tokens = user_input.split()
+    if tokens:
+        first_token = tokens[0].lower()
+        if first_token == 'r':
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=18))
+            if len(tokens) > 1 and tokens[1].isdigit():
+                threshold_mb = int(tokens[1])
+            else:
+                threshold_mb = 1024
+        else:
+            password = tokens[0]
+            if len(tokens) > 1 and tokens[1].isdigit():
+                threshold_mb = int(tokens[1])
+            else:
+                threshold_mb = 1024
     else:
-        password = user_input or 'ol416'
-    
+        password = 'ol416'
+        threshold_mb = 1024
+
     targets = get_targets()
     records = []
     
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_target = {executor.submit(process_target, t, password): t for t in targets}
+        future_to_target = {executor.submit(process_target, t, password, threshold_mb): t for t in targets}
         for future in concurrent.futures.as_completed(future_to_target):
             t = future_to_target[future]
             try:
@@ -215,6 +262,8 @@ def main():
                 records.append(record)
                 print(f"处理完成: {record['文件名']} -> {record.get('压缩后文件', '')}, "
                       f"Hash: {record['blake3']}, 大小: {record['大小']}, {record['备注']}")
+                if record.get("分卷信息"):
+                    print(f"分卷后文件: {record['分卷信息']}")
             except Exception as e:
                 print(f"处理 {t} 时出错: {e}")
     
@@ -224,6 +273,8 @@ def main():
     print("\n所有处理记录：")
     for rec in records:
         print(f"{rec['文件名']}\t{rec['blake3']}\t{rec['pwd']}\t{rec['大小']}\t{rec['备注']}")
+        if rec.get("分卷信息"):
+            print(f"分卷文件: {rec['分卷信息']}")
 
 if __name__ == '__main__':
     main()
