@@ -1,6 +1,9 @@
 from flask import Flask, request, send_file
 import qrcode
+import barcode
+from barcode.writer import ImageWriter
 from io import BytesIO
+from PIL import Image, ImageDraw
 
 app = Flask(__name__)
 
@@ -10,9 +13,14 @@ def index():
     Displays usage instructions for the QR code generator.
     """
     return """
-    <h1>QR Code Generator API</h1>
-    <p>This API generates QR codes from provided data.</p>
-    <h2>Usage</h2>
+    <h1>QR Code Generator</h1>
+    <p>Enter text to generate a QR code:</p>
+    <form action="/generate_qrcode" method="get">
+        <label for="data">Data:</label>
+        <input type="text" id="data" name="data"><br><br>
+        <input type="submit" value="Generate QR Code">
+    </form>
+    <h2>API Usage</h2>
     <p>To generate a QR code, send a GET request to the <code>/generate_qrcode</code> endpoint with the <code>data</code> parameter.</p>
     <p>Example:</p>
     <pre>/generate_qrcode?data=your_data_here</pre>
@@ -38,12 +46,36 @@ def generate_qrcode():
     )
     qr.add_data(data)
     qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
 
-    img = qr.make_image(fill_color="black", back_color="white")
+   # Generate Barcode
+    try:
+        ean = barcode.get('ean13', data, writer=ImageWriter())
+        barcode_img_buffer = BytesIO()
+        ean.write(barcode_img_buffer)
+        barcode_img_buffer.seek(0)
+        barcode_img = Image.open(barcode_img_buffer)
+    except Exception as e:
+        try:
+            code128 = barcode.get('code128', data, writer=ImageWriter())
+            barcode_img_buffer = BytesIO()
+            code128.write(barcode_img_buffer)
+            barcode_img_buffer.seek(0)
+            barcode_img = Image.open(barcode_img_buffer)
+        except Exception as e:
+            return f"Error generating barcode: {str(e)}", 500
 
-    # Save to a buffer
+    # Combine images
+    qr_width, qr_height = qr_img.size
+    barcode_width, barcode_height = barcode_img.size
+    combined_width = max(qr_width, barcode_width)
+    combined_height = qr_height + barcode_height
+    combined_img = Image.new("RGB", (combined_width, combined_height), "white")
+    combined_img.paste(qr_img, (int((combined_width - qr_width) / 2), 0))
+    combined_img.paste(barcode_img, (int((combined_width - barcode_width) / 2), qr_height))
+
     img_buffer = BytesIO()
-    img.save(img_buffer, 'PNG') # Specify the format explicitly
+    combined_img.save(img_buffer, 'PNG')
     img_buffer.seek(0)
 
     return send_file(img_buffer, mimetype='image/png')
