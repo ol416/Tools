@@ -36,12 +36,13 @@ def index():
                 margin-bottom: 5px;
                 font-weight: bold;
             }
-            input[type="text"] {
+            textarea {
                 padding: 8px;
                 margin-bottom: 10px;
                 border: 1px solid #ccc;
                 border-radius: 4px;
-                width: 250px;
+                width: 100%;
+                height: 100px;
             }
             select {
                 padding: 8px;
@@ -78,7 +79,7 @@ def index():
     <p>Enter text to generate a QR code:</p>
     <form action="/generate_qrcode" method="get">
         <label for="data">Data:</label>
-        <input type="text" id="data" name="data">
+        <textarea id="data" name="data" rows="4" cols="50"></textarea>
         <label for="autoReset">Auto Reset Data:<input type="checkbox" id="autoReset" name="autoReset"></label>
         
 
@@ -101,7 +102,7 @@ def index():
         </div>
     </form>
 
-    <img id="qrcodeImage" src="" alt="Generated QR Code">
+    <img id="qrcodeImage" src="" alt="Generated QR Code"><br><br>
 
     <h2>API Usage</h2>
     <p>To generate a QR code, send a GET request to the <code>/generate_qrcode</code> endpoint with the <code>data</code> parameter.</p>
