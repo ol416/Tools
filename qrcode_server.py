@@ -177,14 +177,18 @@ def index():
                 .then(blob => {
                     const imageUrl = URL.createObjectURL(blob);
                     qrcodeImage.src = imageUrl;
+                    if (autoResetCheckbox.checked) {
+                        dataInput.value = '';
+                    }
                 });
         }
 
         dataInput.addEventListener('keydown', function(event) {
             if (event.keyCode === 13) {
                 event.preventDefault();
+                updateImage();
                 if (autoResetCheckbox.checked) {
-                    updateImage();
+                    dataInput.value = '';
                 }
             }
         });
