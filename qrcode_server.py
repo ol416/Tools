@@ -92,17 +92,16 @@ def index():
                 </select>
             </div>
             <div>
-                <label>Position:</label><br>
+                <label>Position:</label>
                 <input type="radio" id="leftRight" name="position" value="leftRight">
                 <label for="leftRight">Left/Right</label>
                 <input type="radio" id="topBottom" name="position" value="topBottom">
                 <label for="topBottom">Top/Bottom</label>
             </div>
         </div>
-        <br><br>
     </form>
 
-    <img id="qrcodeImage" src="" alt="Generated QR Code"><br><br>
+    <img id="qrcodeImage" src="" alt="Generated QR Code">
 
     <h2>API Usage</h2>
     <p>To generate a QR code, send a GET request to the <code>/generate_qrcode</code> endpoint with the <code>data</code> parameter.</p>
