@@ -184,11 +184,17 @@ def index():
         dataInput.addEventListener('keydown', function(event) {
             if (event.keyCode === 13) {
                 event.preventDefault();
-                updateImage();
+                if (autoResetCheckbox.checked) {
+                    updateImage();
+                }
             }
         });
 
-        dataInput.addEventListener('input', updateImage);
+        dataInput.addEventListener('input', function() {
+            if (!autoResetCheckbox.checked) {
+                updateImage();
+            }
+        });
 
         form.addEventListener('submit', function(event) {
             event.preventDefault();
