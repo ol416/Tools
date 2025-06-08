@@ -13,15 +13,76 @@ def index():
     Displays usage instructions for the QR code generator.
     """
     return """
+    <head>
+        <style>
+            body {
+                font-family: 'Arial', sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background-color: #f4f4f4;
+            }
+            form {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 20px;
+                padding: 20px;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            }
+            label {
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+            input[type="text"] {
+                padding: 8px;
+                margin-bottom: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                width: 250px;
+            }
+            select {
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            select:hover {
+                border-color: #aaa;
+            }
+            .options {
+                display: flex;
+                align-items: center;
+            }
+            .options > div {
+                margin-right: 20px;
+            }
+            input[type="radio"] {
+                margin-right: 5px;
+                cursor: pointer;
+            }
+            input[type="radio"]:hover + label {
+                text-decoration: underline;
+            }
+            img {
+                max-width: 300px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
     <h1>QR Code Generator</h1>
     <p>Enter text to generate a QR code:</p>
     <form action="/generate_qrcode" method="get">
         <label for="data">Data:</label>
         <input type="text" id="data" name="data">
-        <label for="autoReset">Auto Reset Data:</label>
-        <input type="checkbox" id="autoReset" name="autoReset"><br><br>
+        <label for="autoReset">Auto Reset Data:<input type="checkbox" id="autoReset" name="autoReset"></label>
+        
 
-        <div style="display: flex; align-items: center;">
+        <div class="options">
             <div style="margin-right: 20px;">
                 <label for="mode">Mode:</label>
                 <select id="mode" name="mode">
@@ -31,7 +92,7 @@ def index():
                 </select>
             </div>
             <div>
-                <label>Position:</label>
+                <label>Position:</label><br>
                 <input type="radio" id="leftRight" name="position" value="leftRight">
                 <label for="leftRight">Left/Right</label>
                 <input type="radio" id="topBottom" name="position" value="topBottom">
@@ -39,8 +100,6 @@ def index():
             </div>
         </div>
         <br><br>
-
-        <input type="submit" value="Generate">
     </form>
 
     <img id="qrcodeImage" src="" alt="Generated QR Code"><br><br>
@@ -102,21 +161,37 @@ def index():
             localStorage.setItem('autoReset', autoResetCheckbox.checked);
         });
 
-        form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
-
-            const formData = new FormData(form);
-            const params = new URLSearchParams(formData);
-
-            fetch('/generate_qrcode?' + params.toString())
+        function updateImage() {
+            const data = dataInput.value;
+            const mode = modeSelect.value;
+            let position = 'topBottom';
+            if (mode === 'both') {
+                if (leftRightRadio.checked) {
+                    position = 'leftRight';
+                } else {
+                    position = 'topBottom';
+                }
+            }
+            let url = '/generate_qrcode?data=' + data + '&mode=' + mode + '&position=' + position;
+            fetch(url)
                 .then(response => response.blob())
                 .then(blob => {
                     const imageUrl = URL.createObjectURL(blob);
                     qrcodeImage.src = imageUrl;
-                    if (autoResetCheckbox.checked) {
-                        dataInput.value = '';
-                    }
                 });
+        }
+
+        dataInput.addEventListener('keydown', function(event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                updateImage();
+            }
+        });
+
+        dataInput.addEventListener('input', updateImage);
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
         });
     </script>
     """
