@@ -287,7 +287,7 @@ def generate_qrcode():
 if __name__ == '__main__':
     # Use the following line for development with a test certificate.
     #  Remove for production, and handle SSL appropriately for your deployment.
-    app.run(ssl_context=(r'D:\Tools\mkcert\localhost+2.pem', r'D:\Tools\mkcert\localhost+2-key.pem'), debug=True)
+    app.run(ssl_context=(r'D:\Tools\mkcert\localhost+2.pem', r'D:\Tools\mkcert\localhost+2-key.pem'), debug=False,host='0.0.0.0',port=8500)
     # For a production deployment, use a proper WSGI server and configure SSL properly.
     # Example:
     # from waitress import serve
