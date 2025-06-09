@@ -79,16 +79,6 @@ def index():
     <p>Enter text to generate a QR code:</p>
     <form action="/generate_qrcode" method="get">
         <label for="data">Data:</label>
-        <div class="options">
-            <div>
-                <label>Input Type:</label>
-                <input type="radio" id="text" name="input_type" value="text" checked>
-                <label for="text">Text</label>
-                <input type="radio" id="scan" name="input_type" value="scan">
-                <label for="scan">Scan</label>
-            </div>
-        </div>
-        <label for="data">Data:</label>
         <textarea id="data" name="data" rows="4" cols="50"></textarea>
         <label for="autoReset">Auto Reset Data:<input type="checkbox" id="autoReset" name="autoReset"></label>
 
@@ -112,7 +102,7 @@ def index():
 
         <div>
             <label for="error_correction">Error Correction:</label>
-            <select id="error_correction" name="error_correction">
+            <select id="error_correction" name="error_correction" id="error_correction">
                 <option value="L">L</option>
                 <option value="M">M</option>
                 <option value="Q">Q</option>
@@ -122,12 +112,12 @@ def index():
 
         <div>
             <label for="size">Size:</label>
-            <input type="number" id="size" name="size" value="10" min="1">
+            <input type="number" id="size" name="size" value="10" min="1" id="size">
         </div>
 
         <div>
             <label for="padding">Padding:</label>
-            <input type="number" id="padding" name="padding" value="4" min="0">
+            <input type="number" id="padding" name="padding" value="4" min="0" id="padding">
         </div>
     </form>
 
@@ -154,11 +144,17 @@ def index():
         const qrcodeImage = document.getElementById('qrcodeImage');
         const form = document.querySelector('form');
         const autoResetCheckbox = document.getElementById('autoReset');
+        const errorCorrectionSelect = document.getElementById('error_correction');
+        const sizeInput = document.getElementById('size');
+        const paddingInput = document.getElementById('padding');
 
         // Load saved settings
         const savedMode = localStorage.getItem('mode');
         const savedPosition = localStorage.getItem('position');
         const savedAutoReset = localStorage.getItem('autoReset');
+        const savedErrorCorrection = localStorage.getItem('error_correction');
+        const savedSize = localStorage.getItem('size');
+        const savedPadding = localStorage.getItem('padding');
 
         if (savedMode) {
             modeSelect.value = savedMode;
@@ -172,6 +168,15 @@ def index():
         }
         if (savedAutoReset) {
             autoResetCheckbox.checked = savedAutoReset === 'true';
+        }
+        if (savedErrorCorrection) {
+            errorCorrectionSelect.value = savedErrorCorrection;
+        }
+        if (savedSize) {
+            sizeInput.value = savedSize;
+        }
+        if (savedPadding) {
+            paddingInput.value = savedPadding;
         }
 
         modeSelect.addEventListener('change', function() {
@@ -190,6 +195,18 @@ def index():
             localStorage.setItem('autoReset', autoResetCheckbox.checked);
         });
 
+        errorCorrectionSelect.addEventListener('change', function() {
+            localStorage.setItem('error_correction', errorCorrectionSelect.value);
+        });
+
+        sizeInput.addEventListener('change', function() {
+            localStorage.setItem('size', sizeInput.value);
+        });
+
+        paddingInput.addEventListener('change', function() {
+            localStorage.setItem('padding', paddingInput.value);
+        });
+
         function updateImage() {
             const data = dataInput.value;
             const mode = modeSelect.value;
@@ -201,12 +218,11 @@ def index():
                     position = 'topBottom';
                 }
             }
-            const inputType = document.querySelector('input[name="input_type"]:checked').value;
-            const errorCorrection = document.getElementById('error_correction').value;
-            const size = document.getElementById('size').value;
-            const padding = document.getElementById('padding').value;
+            const errorCorrection = errorCorrectionSelect.value;
+            const size = sizeInput.value;
+            const padding = paddingInput.value;
 
-            let url = '/generate_qrcode?data=' + encodeURIComponent(data) + '&mode=' + mode + '&position=' + position + '&input_type=' + inputType + '&error_correction=' + errorCorrection + '&size=' + size + '&padding=' + padding;
+            let url = '/generate_qrcode?data=' + encodeURIComponent(data) + '&mode=' + mode + '&position=' + position + '&error_correction=' + errorCorrection + '&size=' + size + '&padding=' + padding;
             fetch(url)
                 .then(response => response.blob())
                 .then(blob => {
@@ -252,7 +268,6 @@ def generate_qrcode():
     data = request.args.get('data', '')
     mode = request.args.get('mode', 'both')
     position = request.args.get('position', 'topBottom')
-    input_type = request.args.get('input_type', 'text')
     error_correction = request.args.get('error_correction', 'L')
     size = int(request.args.get('size', 10))
     padding = int(request.args.get('padding', 4))
