@@ -79,9 +79,18 @@ def index():
     <p>Enter text to generate a QR code:</p>
     <form action="/generate_qrcode" method="get">
         <label for="data">Data:</label>
+        <div class="options">
+            <div>
+                <label>Input Type:</label>
+                <input type="radio" id="text" name="input_type" value="text" checked>
+                <label for="text">Text</label>
+                <input type="radio" id="scan" name="input_type" value="scan">
+                <label for="scan">Scan</label>
+            </div>
+        </div>
+        <label for="data">Data:</label>
         <textarea id="data" name="data" rows="4" cols="50"></textarea>
         <label for="autoReset">Auto Reset Data:<input type="checkbox" id="autoReset" name="autoReset"></label>
-        
 
         <div class="options">
             <div style="margin-right: 20px;">
@@ -99,6 +108,26 @@ def index():
                 <input type="radio" id="topBottom" name="position" value="topBottom">
                 <label for="topBottom">Top/Bottom</label>
             </div>
+        </div>
+
+        <div>
+            <label for="error_correction">Error Correction:</label>
+            <select id="error_correction" name="error_correction">
+                <option value="L">L</option>
+                <option value="M">M</option>
+                <option value="Q">Q</option>
+                <option value="H">H</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="size">Size:</label>
+            <input type="number" id="size" name="size" value="10" min="1">
+        </div>
+
+        <div>
+            <label for="padding">Padding:</label>
+            <input type="number" id="padding" name="padding" value="4" min="0">
         </div>
     </form>
 
@@ -172,7 +201,12 @@ def index():
                     position = 'topBottom';
                 }
             }
-            let url = '/generate_qrcode?data=' + data + '&mode=' + mode + '&position=' + position;
+            const inputType = document.querySelector('input[name="input_type"]:checked').value;
+            const errorCorrection = document.getElementById('error_correction').value;
+            const size = document.getElementById('size').value;
+            const padding = document.getElementById('padding').value;
+
+            let url = '/generate_qrcode?data=' + encodeURIComponent(data) + '&mode=' + mode + '&position=' + position + '&input_type=' + inputType + '&error_correction=' + errorCorrection + '&size=' + size + '&padding=' + padding;
             fetch(url)
                 .then(response => response.blob())
                 .then(blob => {
@@ -203,6 +237,9 @@ def index():
         form.addEventListener('submit', function(event) {
             event.preventDefault();
         });
+
+        // Generate default QR code on page load
+        updateImage();
     </script>
     """
 
@@ -215,20 +252,31 @@ def generate_qrcode():
     data = request.args.get('data', '')
     mode = request.args.get('mode', 'both')
     position = request.args.get('position', 'topBottom')
+    input_type = request.args.get('input_type', 'text')
+    error_correction = request.args.get('error_correction', 'L')
+    size = int(request.args.get('size', 10))
+    padding = int(request.args.get('padding', 4))
 
     if not data:
-        return "No data provided. Please use the 'data' parameter in the URL, e.g., /generate_qrcode?data=your_data", 400
+        data = "Default QR Code"
 
     qr_img = None
     barcode_img = None
 
     # Generate QR Code
     if mode in ('qr', 'both'):
+        error_correction_level = {
+            'L': qrcode.constants.ERROR_CORRECT_L,
+            'M': qrcode.constants.ERROR_CORRECT_M,
+            'Q': qrcode.constants.ERROR_CORRECT_Q,
+            'H': qrcode.constants.ERROR_CORRECT_H,
+        }.get(error_correction, qrcode.constants.ERROR_CORRECT_L)
+
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
+            error_correction=error_correction_level,
+            box_size=size,
+            border=padding,
         )
         qr.add_data(data)
         qr.make(fit=True)
@@ -237,20 +285,13 @@ def generate_qrcode():
     # Generate Barcode
     if mode in ('barcode', 'both'):
         try:
-            ean = barcode.get('ean13', data, writer=ImageWriter())
+            code128 = barcode.get('code128', data, writer=ImageWriter())
             barcode_img_buffer = BytesIO()
-            ean.write(barcode_img_buffer)
+            code128.write(barcode_img_buffer, options={"module_width": size/20, "quiet_zone": padding})
             barcode_img_buffer.seek(0)
             barcode_img = Image.open(barcode_img_buffer)
         except Exception as e:
-            try:
-                code128 = barcode.get('code128', data, writer=ImageWriter())
-                barcode_img_buffer = BytesIO()
-                code128.write(barcode_img_buffer)
-                barcode_img_buffer.seek(0)
-                barcode_img = Image.open(barcode_img_buffer)
-            except Exception as e:
-                return f"Error generating barcode: {str(e)}", 500
+            return f"Error generating barcode: {str(e)}", 500
 
     # Combine images
     if mode == 'both':
@@ -261,17 +302,15 @@ def generate_qrcode():
             combined_width = qr_width + barcode_width
             combined_height = max(qr_height, barcode_height)
             combined_img = Image.new("RGB", (combined_width, combined_height), "white")
-            # Calculate offset
-            offset = (qr_height - barcode_height) // 2
-            # Align top
-            combined_img.paste(qr_img, (0, max(0, -offset)))
-            combined_img.paste(barcode_img, (qr_width, max(0, offset)))
+            offset = (combined_height - barcode_height) // 2
+            combined_img.paste(qr_img, (0, 0))
+            combined_img.paste(barcode_img, (qr_width, offset))
         else:  # topBottom
             combined_width = max(qr_width, barcode_width)
             combined_height = qr_height + barcode_height
             combined_img = Image.new("RGB", (combined_width, combined_height), "white")
-            combined_img.paste(qr_img, (int((combined_width - qr_width) / 2), 0))
-            combined_img.paste(barcode_img, (int((combined_width - barcode_width) / 2), qr_height))
+            combined_img.paste(qr_img, ((combined_width - qr_width) // 2, 0))
+            combined_img.paste(barcode_img, ((combined_width - barcode_width) // 2, qr_height))
 
     elif mode == 'qr':
         combined_img = qr_img
