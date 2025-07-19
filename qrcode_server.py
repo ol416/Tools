@@ -126,12 +126,15 @@ def index():
     <h2>API Usage</h2>
     <p>To generate a QR code, send a GET request to the <code>/generate_qrcode</code> endpoint with the <code>data</code> parameter.</p>
     <p>Examples:</p>
-    <ul>
-        <li><code>/generate_qrcode?data=your_data_here</code> (Generates both QR code and barcode, top/bottom)</li>
-        <li><code>/generate_qrcode?data=your_data_here&mode=qr</code> (Generates QR code only)</li>
-        <li><code>/generate_qrcode?data=your_data_here&mode=barcode</code> (Generates barcode only)</li>
-        <li><code>/generate_qrcode?data=your_data_here&mode=both&position=leftRight</code> (Generates both QR code and barcode, left/right)</li>
-        <li><code>/generate_qrcode?data=your_data_here&mode=both&position=topBottom</code> (Generates both QR code and barcode, top/bottom)</li>
+    <ul style="list-style-type: disc; padding-left: 20px;">
+        <li><code>/generate_qrcode?data=your_data_here</code> (Default: Both QR & Barcode, Top/Bottom, Error Correction L, Size 10, Padding 4)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=qr</code> (QR code only)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=barcode</code> (Barcode only)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=both&position=leftRight</code> (Both QR & Barcode, Left/Right)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=both&position=topBottom</code> (Both QR & Barcode, Top/Bottom)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=qr&error_correction=H&size=12&padding=2</code> (QR code with High error correction, size 12, padding 2)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=barcode&size=15&padding=5</code> (Barcode with size 15 (affects module width), padding 5)</li>
+        <li><code>/generate_qrcode?data=your_data_here&mode=both&position=leftRight&error_correction=M&size=8&padding=1</code> (Both, Left/Right, QR Error Correction M, Size 8, Padding 1)</li>
     </ul>
     <p>Replace <code>your_data_here</code> with the data you want to encode.</p>
 
