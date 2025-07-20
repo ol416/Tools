@@ -13,17 +13,17 @@ action_thread = None  # 用于存放动作线程
 
 def repeating_action_loop():
     """
-    在独立的线程中执行循环动作：推3秒，复位，等待2秒，然后重复。
+    在独立的线程中执行循环动作：推1秒，复位，等待8秒，然后重复。
     这个循环会持续进行，直到 is_loop_active 标志变为 False。
     """
     while is_loop_active:
-        print("循环中：开始向右推... (持续3秒)")
+        print("循环中：开始向右推... (持续1秒)")
         # 模拟右摇杆向右推到最大值
-        gamepad.right_joystick_float(x_value_float=1.0, y_value_float=0.0)
+        gamepad.right_joystick_float(x_value_float=0.4, y_value_float=0.0)
         gamepad.update()
 
         # 等待3秒
-        time.sleep(3)
+        time.sleep(1)
 
         # 在复位前再次检查标志，以便在3秒等待期间可以停止
         if not is_loop_active:
@@ -34,8 +34,8 @@ def repeating_action_loop():
         gamepad.right_joystick_float(x_value_float=0.0, y_value_float=0.0)
         gamepad.update()
 
-        # 等待2秒，完成一个5秒的周期
-        time.sleep(2)
+        # 等待2秒，完成一个8秒的周期
+        time.sleep(8)
 
     # 确保循环停止时摇杆是复位的
     gamepad.right_joystick_float(x_value_float=0.0, y_value_float=0.0)
