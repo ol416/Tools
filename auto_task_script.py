@@ -1,6 +1,7 @@
 import json
 import time
 import threading
+import random
 from pynput import mouse, keyboard
 from pynput.mouse import Button
 from pynput.keyboard import Key
@@ -96,6 +97,20 @@ class AutoScriptTask:
 
     def wait(self, seconds=1.0):
         time.sleep(seconds)
+
+    def random_wait(self, min_seconds=0.5, max_seconds=2.0):
+        duration = random.uniform(min_seconds, max_seconds)
+        self.log(f"[随机等待] {duration:.2f} 秒")
+        time.sleep(duration)
+
+    def hold_and_release(self, button, duration=1.0):
+        try:
+            self.log(f"[按住释放] 按键: {button}, 时长: {duration}")
+            self.keyboard_controller.press(button)
+            time.sleep(duration)
+            self.keyboard_controller.release(button)
+        except Exception as e:
+            self.log(f"[错误] hold_and_release 失败：{e}", "error")
 
     def stop(self):
         self.running = False

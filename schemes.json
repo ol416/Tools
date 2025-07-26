@@ -1,0 +1,62 @@
+{
+  "macros": {
+    "上前连击": [
+      { "action": "hold_and_release", "params": { "button": "w", "duration": 0.2 } },
+      { "action": "hold_and_release", "params": { "button": "f", "duration": 1.0 } }
+    ],
+    "快速拾取": [
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } }
+        
+    ]
+  },
+  "tasks": [
+    {
+      "name": "巴鲁矿",
+      "steps": [
+        { "action": "hold_and_release", "params": { "button": "w", "duration": 2.0 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 2 } },
+        { "action": "hold_and_release", "params": { "button": "s", "duration": 0.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "a", "duration": 0.3 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 1.7 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 1.7 } },
+        { "action": "hold_and_release", "params": { "button": "w", "duration": 0.7 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 0.5 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "hold_and_release", "params": { "button": "s", "duration": 0.4 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 3 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "hold_and_release", "params": { "button": "a", "duration": 6.3 } },
+        { "action": "hold_and_release", "params": { "button": "w", "duration": 1.3 } }
+      ]
+    },
+    {
+      "name": "木枝",
+      "steps": [
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "a", "duration": 0.4 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.2, "max_seconds": 0.6 } },
+        { "action": "hold_and_release", "params": { "button": "w", "duration": 0.6 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "w", "duration": 0.3 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 0.2 } },
+        { "action": "hold_and_release", "params": { "button": "f", "duration": 3.6 } },
+        { "action": "random_wait", "params": { "min_seconds": 0.5, "max_seconds": 1 } },
+        { "action": "hold_and_release", "params": { "button": "a", "duration": 0.2 } },
+        { "action": "hold_and_release", "params": { "button": "s", "duration": 0.9 } },
+        { "action": "hold_and_release", "params": { "button": "d", "duration": 0.5 } },
+        { "action": "random_wait", "params": { "min_seconds": 6, "max_seconds": 7 } }
+      ]
+    }
+  ]
+}
