@@ -34,28 +34,28 @@ class AutoScriptTask:
             self.log("[错误] 没有加载任何任务方案", "error")
             return
         self.running = True
-        self.current_step = 0
-        scheme = self.schemes[self.current_scheme]
-        self.log(f"[运行] 当前任务方案：{scheme.get('name', '未命名')}")
-        steps = scheme.get('steps', [])
-        while self.running and self.current_step < len(steps):
-            step = steps[self.current_step]
-            action = step.get('action')
-            params = step.get('params', {})
-            self.log(f"[步骤 {self.current_step + 1}] {action} {params}")
-            if action == "macro":
-                macro_name = params.get('name')
-                if macro_name in self.macros:
-                    self.run_macro(self.macros[macro_name])
+        while self.running:
+            self.current_step = 0
+            scheme = self.schemes[self.current_scheme]
+            self.log(f"[运行] 当前任务方案：{scheme.get('name', '未命名')}")
+            steps = scheme.get('steps', [])
+            while self.running and self.current_step < len(steps):
+                step = steps[self.current_step]
+                action = step.get('action')
+                params = step.get('params', {})
+                self.log(f"[步骤 {self.current_step + 1}] {action} {params}")
+                if action == "macro":
+                    macro_name = params.get('name')
+                    if macro_name in self.macros:
+                        self.run_macro(self.macros[macro_name])
+                    else:
+                        self.log(f"[宏] 未找到宏：{macro_name}", "warning")
+                elif hasattr(self, action):
+                    getattr(self, action)(**params)
                 else:
-                    self.log(f"[宏] 未找到宏：{macro_name}", "warning")
-            elif hasattr(self, action):
-                getattr(self, action)(**params)
-            else:
-                self.log(f"[警告] 未知动作: {action}", "warning")
-            self.current_step += 1
-        self.running = False
-        self.log("[完成] 当前任务执行完毕")
+                    self.log(f"[警告] 未知动作: {action}", "warning")
+                self.current_step += 1
+            self.log("[循环] 当前方案执行完毕，准备下一轮...")
 
     def run_macro(self, steps):
         self.log("[宏] 开始执行组合动作")
