@@ -23,6 +23,18 @@ class AutoScriptTask:
         self.current_scheme = 0
         self.schemes = []
         self.selecting_scheme = False
+        self.macros = {}  # 初始化宏注册区
+
+        # === 从 JSON 配置文件中加载宏和任务列表 ===
+        try:
+            with open('schemes.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                self.macros = config.get("macros", {})    # 宏注册区
+                self.schemes = config.get("tasks", [])    # 任务方案列表
+                print(f"成功加载 {len(self.schemes)} 个任务方案和 {len(self.macros)} 个宏定义。")
+        except Exception as e:
+            print(f"配置文件加载失败: {e}")
+
 
     def log(self, msg, level="info"):
         print(msg)
@@ -31,10 +43,13 @@ class AutoScriptTask:
     def load_schemes_from_file(self, path='schemes.json'):
         try:
             with open(path, 'r', encoding='utf-8') as f:
-                self.schemes = json.load(f)
-            self.log(f"成功加载 {len(self.schemes)} 个任务方案", "info")
+                config = json.load(f)
+                self.macros = config.get("macros", {})
+                self.schemes = config.get("tasks", [])
+            self.log(f"成功加载 {len(self.schemes)} 个任务方案 和 {len(self.macros)} 个宏", "info")
         except Exception as e:
             self.log(f"[错误] 无法加载配置文件: {e}", "error")
+
 
     def hold_and_release(self, button='left', duration=1.0, position=None):
         try:
@@ -118,9 +133,19 @@ class AutoScriptTask:
                 params = step.get('params', {})
 
                 self.log(f"[步骤 {self.current_step + 1}/{total}] {action} {params}")
-                method = getattr(self, action, None)
-                if method:
-                    method(**params)
+
+                if action == "macro":
+                    self.run_macro(params.get('steps', []))
+                elif action == "macro_ref":
+                    name = params.get("name")
+                    macro_steps = self.macros.get(name)
+                    if macro_steps:
+                        self.log(f"[宏引用] 执行宏: {name}")
+                        self.run_macro(macro_steps)
+                    else:
+                        self.log(f"[错误] 宏 '{name}' 未注册", "error")
+                elif hasattr(self, action):
+                    getattr(self, action)(**params)
                 else:
                     self.log(f"[未知动作] {action}", "warning")
 
@@ -160,6 +185,21 @@ class AutoScriptTask:
                 print("请输入有效数字")
 
         self.selecting_scheme = False
+        
+    def run_macro(self, steps):
+        self.log("[宏] 开始执行组合动作")
+        for sub_index, step in enumerate(steps, 1):
+            action = step.get('action')
+            params = step.get('params', {})
+            self.log(f"[宏步骤 {sub_index}] {action} {params}")
+            if action == "macro":
+                self.run_macro(params.get('steps', []))  # 支持嵌套宏
+            elif hasattr(self, action):
+                getattr(self, action)(**params)
+            else:
+                self.log(f"[宏警告] 未知动作: {action}", "warning")
+        self.log("[宏] 组合动作执行结束")
+
 
 def keyboard_listener(task: AutoScriptTask):
     def on_press(key):
