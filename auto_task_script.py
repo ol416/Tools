@@ -106,11 +106,43 @@ class AutoScriptTask:
     def hold_and_release(self, button, duration=1.0):
         try:
             self.log(f"[按住释放] 按键: {button}, 时长: {duration}")
-            self.keyboard_controller.press(button)
+            k = getattr(Key, button, button) if len(button) > 1 or button in ['shift', 'ctrl', 'alt','space'] else button
+            self.keyboard_controller.press(k)
             time.sleep(duration)
-            self.keyboard_controller.release(button)
+            self.keyboard_controller.release(k)
         except Exception as e:
             self.log(f"[错误] hold_and_release 失败：{e}", "error")
+
+    def key_combination(self, keys, duration=1.0, delay=0.05):
+        """
+        同时按下多个键
+        
+        Args:
+            keys: 按键列表，如 ['a', 'shift']
+            duration: 按住时间
+            delay: 按键之间的延迟时间（秒）
+        """
+        try:
+            self.log(f"[组合按键] 按键: {keys}, 时长: {duration}")
+            
+            # 按下所有按键
+            pressed_keys = []
+            for key in keys:
+                k = getattr(Key, key, key) if len(key) > 1 or key in ['shift', 'ctrl', 'alt'] else key
+                self.keyboard_controller.press(k)
+                pressed_keys.append(k)
+                time.sleep(delay)  # 在按键之间添加延迟
+            
+            # 等待指定时间
+            time.sleep(duration)
+            
+            # 释放所有按键（按相反顺序）
+            for k in reversed(pressed_keys):
+                self.keyboard_controller.release(k)
+                time.sleep(delay)  # 在释放按键之间也添加延迟
+                
+        except Exception as e:
+            self.log(f"[错误] key_combination 失败：{e}", "error")
 
     def stop(self):
         self.running = False
