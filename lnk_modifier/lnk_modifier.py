@@ -1,5 +1,6 @@
 import os
 import win32com.client
+import pythoncom
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import json
@@ -23,7 +24,7 @@ class LnkModifierApp:
         self.find_path_entry = ttk.Entry(master, width=80)
         self.find_path_entry.grid(row=0, column=1, columnspan=3, sticky="ew", padx=10, pady=5)
         
-        # *** 修改点 1: 移除默认的 "WorkingDirectory" 文本，只加载保存的配置。***
+        # *** 修改点 1: 移除默认的 "WorkingDirectory" 文本，只加载保存的配置。此修改点已在原代码中实现。***
         if self.saved_find_path:
             self.find_path_entry.insert(0, self.saved_find_path)
 
@@ -53,7 +54,7 @@ class LnkModifierApp:
 
         # ====== 文件列表 ======
         ttk.Label(master, text="LNK 文件列表:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
-        columns = ("File Name", "Full Path", "TargetPath", "WorkingDir")
+        columns = ("File Name", "TargetPath", "WorkingDir")
         self.tree = ttk.Treeview(master, columns=columns, show="headings")
         self.tree.grid(row=7, column=0, columnspan=4, sticky="nsew", padx=10, pady=5)
 
@@ -61,7 +62,6 @@ class LnkModifierApp:
             self.tree.heading(col, text=col)
 
         self.tree.column("File Name", width=150)
-        self.tree.column("Full Path", width=380)
         self.tree.column("TargetPath", width=250)
         self.tree.column("WorkingDir", width=250)
 
@@ -102,8 +102,10 @@ class LnkModifierApp:
             col = self.tree.identify_column(event.x)
             if row_id:
                 value = self.tree.item(row_id, "values")[int(col[1:]) - 1]
-                x, y, _, _ = self.tree.bbox(row_id, col)
+                # 获取单元格的边界框，并加上偏移量来放置Tooltip
+                x, y, w, h = self.tree.bbox(row_id, col)
                 self.tooltip_label.config(text=value)
+                # 使用 event.x_root 和 event.y_root 获取屏幕绝对位置
                 self.tooltip.geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
                 self.tooltip.deiconify()
         else:
@@ -154,16 +156,27 @@ class LnkModifierApp:
         self.status_label.config(text=f"正在扫描目录：{start_path} ...")
         self.tree.delete(*self.tree.get_children())
         self.lnk_files_to_process.clear()
+        first_lnk_workdir = None # 记录第一个 LNK 文件的 WorkingDirectory
 
-        for root, _, files in os.walk(start_path):
+        for root, dirs, files in os.walk(start_path):
+            
+            # *** 需求修改点 2: 查找lnk文件时，忽略LNK_Backup文件夹。***
+            # 在 os.walk 循环中修改 dirs 列表可以跳过特定目录
+            # 注意：这里使用了一个更通用的模式来处理所有以 'LNK_Backup' 开头的文件夹，以匹配创建备份文件夹时的命名方式
+            dirs[:] = [d for d in dirs if not d.lower().startswith("lnk_backup")]
+
             for file in files:
                 if file.lower().endswith(".lnk"):
                     full_path = os.path.join(root, file)
                     self.lnk_files_to_process.append(full_path)
                     target, workdir = self.get_shortcut_info(full_path)
+                    
+                    # 记录第一个 LNK 文件的 WorkingDirectory
+                    if first_lnk_workdir is None and workdir:
+                        first_lnk_workdir = os.path.normpath(workdir)
+
                     self.tree.insert("", "end", values=(
                         file,
-                        self.truncate_path(full_path),
                         self.truncate_path(target),
                         self.truncate_path(workdir)
                     ))
@@ -171,12 +184,25 @@ class LnkModifierApp:
         total = len(self.lnk_files_to_process)
         self.status_label.config(text=f"扫描完成，共找到 {total} 个 .lnk 文件")
         
-        # *** 修改点 2: 扫描完成后，如果查找输入框为空，则默认设置为扫描的根目录 ***
-        if not self.find_path_entry.get() and start_path:
-             # 使用 os.path.normpath 来确保路径格式一致性
-            default_find_path = os.path.normpath(start_path)
-            self.find_path_entry.insert(0, default_find_path)
-            messagebox.showinfo("提示", f"已将 '查找路径片段' 默认设置为扫描目录: \n{default_find_path}")
+        # *** 需求修改点 1: 将默认查找路径设置为第一个 LNK 文件属性中的“起始位置 (Working Directory)”，而不是 LNK 文件本身的父目录。***
+        # 仅当查找输入框为空时才设置默认值
+        if not self.find_path_entry.get():
+             default_find_path = None
+
+             if first_lnk_workdir:
+                 # 使用第一个 LNK 文件的 Working Directory
+                 default_find_path = first_lnk_workdir
+                 message = f"已将 '查找路径片段' 默认设置为第一个 LNK 文件的起始位置 (Working Directory):\n{default_find_path}"
+             elif start_path:
+                 # 如果没有找到 Working Directory，退回到使用扫描根目录 (原逻辑)
+                 default_find_path = os.path.normpath(start_path)
+                 message = f"未找到有效的起始位置，已将 '查找路径片段' 默认设置为扫描目录: \n{default_find_path}"
+
+             if default_find_path:
+                 self.find_path_entry.insert(0, default_find_path)
+                 messagebox.showinfo("提示", message)
+             elif total == 0:
+                 messagebox.showinfo("结果", "未找到任何 .lnk 文件。")
         elif total == 0:
             messagebox.showinfo("结果", "未找到任何 .lnk 文件。")
         else:
@@ -189,12 +215,21 @@ class LnkModifierApp:
         return path
 
     def get_shortcut_info(self, path):
+        """获取 LNK 文件的 TargetPath 和 WorkingDirectory"""
         try:
+            # 修复 COM 线程错误：初始化 COM
+            pythoncom.CoInitialize()
+            
             shell = win32com.client.Dispatch("WScript.Shell")
             shortcut = shell.CreateShortCut(path)
+            # 使用 or "" 确保返回的是空字符串而不是 None
             return shortcut.TargetPath or "", shortcut.WorkingDirectory or ""
         except Exception:
             return "", ""
+        finally:
+            # 修复 COM 线程错误：取消初始化 COM
+            # 确保在线程结束时释放资源
+            pythoncom.CoUninitialize() 
 
     # ====== 路径替换 ======
     def apply_path_replacement(self, original, find, repl):
@@ -252,12 +287,17 @@ class LnkModifierApp:
         backup_dir = f"LNK_Backup_{time.strftime('%Y%m%d_%H%M%S')}"
         os.makedirs(backup_dir, exist_ok=True)
         for lnk in self.lnk_files_to_process:
-            shutil.copy2(lnk, os.path.join(backup_dir, os.path.basename(lnk)))
+            try:
+                # 复制到备份目录，保持文件名
+                shutil.copy2(lnk, os.path.join(backup_dir, os.path.basename(lnk)))
+            except Exception as e:
+                print(f"备份文件失败：{lnk} -> {e}")
 
         # 修改路径
         modified_count = 0
         for lnk in self.lnk_files_to_process:
             try:
+                pythoncom.CoInitialize()                 
                 shell = win32com.client.Dispatch("WScript.Shell")
                 sc = shell.CreateShortCut(lnk)
                 
@@ -265,25 +305,51 @@ class LnkModifierApp:
                 original_target = sc.TargetPath or ""
                 original_workdir = sc.WorkingDirectory or ""
 
-                if self.mode_var.get() in ("all", "target_only"):
-                    sc.TargetPath = self.apply_path_replacement(original_target, find_str, replace_str)
-                if self.mode_var.get() in ("all", "working_dir_only"):
-                    sc.WorkingDirectory = self.apply_path_replacement(original_workdir, find_str, replace_str)
+                new_target = original_target
+                new_workdir = original_workdir
                 
+                # 替换目标路径
+                if self.mode_var.get() in ("all", "target_only"):
+                    new_target = self.apply_path_replacement(original_target, find_str, replace_str)
+                
+                # 替换起始位置
+                if self.mode_var.get() in ("all", "working_dir_only"):
+                    new_workdir = self.apply_path_replacement(original_workdir, find_str, replace_str)
+
+                # 检查新目标路径是否存在（如果用户勾选了）
+                if self.check_path_var.get() and self.mode_var.get() in ("all", "target_only"):
+                    # os.path.exists() 可以检查文件或目录
+                    if not os.path.exists(new_target):
+                        # 如果新目标不存在，跳过本次修改，并提示
+                        print(f"警告：新目标路径不存在，跳过修改 {lnk}: {new_target}")
+                        continue # 跳过保存，进入下一个文件
+                
+                # 只有在路径有变化时才赋值和保存
+                if new_target != original_target:
+                    sc.TargetPath = new_target
+                if new_workdir != original_workdir:
+                    sc.WorkingDirectory = new_workdir
+
                 # 检查是否有实际修改
-                if (sc.TargetPath != original_target) or (sc.WorkingDirectory != original_workdir):
+                if (new_target != original_target) or (new_workdir != original_workdir):
                     sc.Save()
                     modified_count += 1
 
             except Exception as e:
                 print(f"修改失败：{lnk} -> {e}")
+            finally:
+                # 修复 COM 线程错误：取消初始化 COM
+                pythoncom.CoUninitialize()                
 
         messagebox.showinfo("完成", f"已成功修改 {modified_count} 个 LNK 文件并备份到 {backup_dir}。")
-        # 重新加载列表以显示新值
-        self.find_lnk_files(os.path.dirname(self.lnk_files_to_process[0]) if self.lnk_files_to_process else os.getcwd())
+        
+        # 重新加载列表以显示新值，并使用当前的起始目录（如果列表非空），否则使用当前工作目录
+        scan_path = os.path.dirname(self.lnk_files_to_process[0]) if self.lnk_files_to_process else os.getcwd()
+        threading.Thread(target=self.find_lnk_files, args=(scan_path,), daemon=True).start()
 
 
 if __name__ == "__main__":
     root = tk.Tk()
+    # 确保应用程序在主线程中运行
     app = LnkModifierApp(root)
     root.mainloop()
